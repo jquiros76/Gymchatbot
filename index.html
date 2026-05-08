@@ -875,7 +875,7 @@ function delay(ms) {
 function addBotBubble(text) {
   const row = document.createElement("div");
   row.className = "bubble-row";
-  row.innerHTML = <div class="bubble-avatar">F</div><div class="bubble bot">${parseBold(text)}</div>;
+  row.innerHTML = `<div class="bubble-avatar">F</div><div class="bubble bot">${parseBold(text)}</div>`;
   messagesEl.appendChild(row);
   scrollBottom();
 }
