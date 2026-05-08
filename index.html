@@ -1346,12 +1346,33 @@ function handleFlowBtn(btn) {
 }
 
 function selectPlan(plan) {
-  selectedPlan = plan;
-  updateScore(15);
-  addUserBubble(`Quiero el plan ${plan.name}`);
-  sendToMake(`Quiero información del plan ${plan.name}`);
-}
 
+  selectedPlan = plan;
+
+  updateScore(15);
+
+  addUserBubble(`Quiero el plan ${plan.name}`);
+
+  addBotBubble(`
+🔥 Excelente elección.
+
+El plan ${plan.name} incluye:
+${plan.benefits.join("\n")}
+
+¿Quieres agendar una visita o hablar con un asesor?
+  `);
+
+  addButtons([
+    {
+      label:"📅 Agendar visita",
+      next:"agendar_intro"
+    },
+    {
+      label:"💬 Hablar con asesor",
+      next:"lead_captured"
+    }
+  ]);
+}
 function bookClass(cls) {
   selectedClass = cls;
   updateScore(10);
