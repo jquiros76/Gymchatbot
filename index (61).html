@@ -1,0 +1,1427 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>PowerGym — FitBot</title>
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;500;600;700;800;900&display=swap" rel="stylesheet"/>
+<style>
+  /* ── RESET & BASE ───────────────────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --fire:    #ff4d00;
+    --ember:   #ff8c42;
+    --gold:    #ffc107;
+    --coal:    #0d0d0d;
+    --iron:    #141414;
+    --steel:   #1c1c1c;
+    --plate:   #252525;
+    --ash:     #3a3a3a;
+    --smoke:   #6b6b6b;
+    --chalk:   #c8c8c8;
+    --white:   #f5f5f5;
+    --red-urg: #e63946;
+    --green-ok:#2dc653;
+    --font:    'Montserrat', sans-serif;
+    --radius:  14px;
+    --shadow:  0 8px 40px rgba(0,0,0,0.6);
+  }
+
+  html, body {
+    height: 100%;
+    font-family: var(--font);
+    background: var(--coal);
+    color: var(--white);
+    overflow-x: hidden;
+  }
+
+  /* ── NOISE TEXTURE OVERLAY ──────────────────────────────────── */
+  body::before {
+    content: '';
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+    background-size: 200px 200px;
+    opacity: 0.5;
+  }
+
+  /* ── BACKGROUND GLOW ────────────────────────────────────────── */
+  .bg-glow {
+    position: fixed; inset: 0; z-index: 0; pointer-events: none;
+    background:
+      radial-gradient(ellipse 60% 40% at 15% 20%, rgba(255,77,0,0.09) 0%, transparent 70%),
+      radial-gradient(ellipse 50% 50% at 85% 75%, rgba(255,193,7,0.05) 0%, transparent 70%);
+  }
+
+  /* ── LANDING PAGE ───────────────────────────────────────────── */
+  #landing {
+    position: relative; z-index: 1;
+    min-height: 100vh;
+    display: flex; align-items: center; justify-content: center;
+    padding: 32px 20px;
+  }
+
+  .landing-inner {
+    max-width: 480px; width: 100%; text-align: center;
+  }
+
+  .badge-pill {
+    display: inline-flex; align-items: center; gap: 6px;
+    background: rgba(255,77,0,0.12);
+    border: 1px solid rgba(255,77,0,0.35);
+    border-radius: 100px;
+    padding: 5px 16px;
+    font-size: 10px; font-weight: 800;
+    letter-spacing: 2.5px; text-transform: uppercase;
+    color: var(--ember);
+    margin-bottom: 28px;
+    animation: fadeUp 0.5s ease both;
+  }
+
+  .badge-pill::before {
+    content: '';
+    width: 6px; height: 6px; border-radius: 50%;
+    background: var(--fire);
+    box-shadow: 0 0 6px var(--fire);
+    animation: pulse-dot 2s infinite;
+  }
+
+  .landing-title {
+    font-size: clamp(38px, 8vw, 56px);
+    font-weight: 900; line-height: 1;
+    letter-spacing: -1.5px;
+    margin-bottom: 8px;
+    animation: fadeUp 0.5s 0.1s ease both;
+  }
+
+  .landing-title span {
+    display: block;
+    background: linear-gradient(135deg, var(--fire) 0%, var(--gold) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .landing-sub {
+    font-size: 14px; font-weight: 500;
+    color: var(--smoke); line-height: 1.6;
+    margin-bottom: 36px;
+    animation: fadeUp 0.5s 0.2s ease both;
+  }
+
+  .features-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 10px; margin-bottom: 36px;
+    animation: fadeUp 0.5s 0.3s ease both;
+  }
+
+  .feature-card {
+    background: var(--steel);
+    border: 1px solid var(--ash);
+    border-radius: var(--radius);
+    padding: 16px; text-align: left;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+
+  .feature-card:hover {
+    border-color: var(--fire);
+    transform: translateY(-2px);
+  }
+
+  .feature-icon { font-size: 20px; margin-bottom: 6px; display: block; }
+  .feature-title { font-size: 12px; font-weight: 700; color: var(--white); margin-bottom: 2px; }
+  .feature-desc  { font-size: 11px; font-weight: 500; color: var(--smoke); }
+
+  .cta-btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 16px 40px; border-radius: 100px;
+    background: linear-gradient(135deg, var(--fire), #e63600);
+    border: none; color: #fff;
+    font-family: var(--font); font-size: 15px; font-weight: 800;
+    letter-spacing: 0.3px; cursor: pointer;
+    box-shadow: 0 0 0 0 rgba(255,77,0,0.4);
+    animation: fadeUp 0.5s 0.4s ease both, glow-pulse 3s 1s infinite;
+    transition: transform 0.15s;
+  }
+
+  .cta-btn:hover { transform: scale(1.04); }
+  .cta-btn:active { transform: scale(0.97); }
+
+  /* ── CHAT SHELL ─────────────────────────────────────────────── */
+  #chat-shell {
+    display: none;
+    position: relative; z-index: 1;
+    min-height: 100vh;
+    align-items: center; justify-content: center;
+    padding: 20px;
+  }
+
+  #chat-shell.visible { display: flex; }
+
+  .chat-window {
+    width: 100%; max-width: 420px;
+    height: 88vh; max-height: 740px;
+    background: var(--iron);
+    border: 1px solid var(--ash);
+    border-radius: 22px;
+    display: flex; flex-direction: column;
+    overflow: hidden;
+    box-shadow: var(--shadow), 0 0 60px rgba(255,77,0,0.08);
+    animation: slideUp 0.35s cubic-bezier(0.16,1,0.3,1) both;
+  }
+
+  /* ── HEADER ─────────────────────────────────────────────────── */
+  .chat-header {
+    background: var(--steel);
+    border-bottom: 1px solid var(--ash);
+    padding: 13px 16px;
+    display: flex; align-items: center; justify-content: space-between;
+    flex-shrink: 0;
+  }
+
+  .header-left { display: flex; align-items: center; gap: 11px; }
+
+  .bot-avatar {
+    width: 38px; height: 38px; border-radius: 12px;
+    background: linear-gradient(135deg, var(--fire), var(--gold));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px; flex-shrink: 0;
+    box-shadow: 0 0 12px rgba(255,77,0,0.3);
+  }
+
+  .bot-name { font-size: 14px; font-weight: 800; color: var(--white); letter-spacing: -0.3px; }
+
+  .bot-status {
+    display: flex; align-items: center; gap: 5px;
+    font-size: 10px; font-weight: 600; color: var(--green-ok);
+    margin-top: 2px;
+  }
+
+  .status-dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--green-ok);
+    box-shadow: 0 0 5px var(--green-ok);
+    animation: pulse-dot 2s infinite;
+  }
+
+  .header-right { display: flex; align-items: center; gap: 8px; }
+
+  .score-badge {
+    display: none;
+    background: rgba(255,77,0,0.15);
+    border: 1px solid rgba(255,77,0,0.3);
+    border-radius: 100px; padding: 3px 10px;
+    font-size: 10px; font-weight: 700; color: var(--ember);
+  }
+
+  .score-badge.visible { display: block; }
+
+  .close-btn {
+    width: 26px; height: 26px; border-radius: 8px;
+    background: var(--plate); border: 1px solid var(--ash);
+    color: var(--smoke); font-size: 12px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+
+  .close-btn:hover { background: var(--ash); color: var(--white); }
+
+  /* ── MESSAGES AREA ──────────────────────────────────────────── */
+  #messages {
+    flex: 1; overflow-y: auto;
+    padding: 16px 14px;
+    display: flex; flex-direction: column; gap: 6px;
+    scroll-behavior: smooth;
+  }
+
+  #messages::-webkit-scrollbar { width: 3px; }
+  #messages::-webkit-scrollbar-thumb { background: var(--ash); border-radius: 3px; }
+
+  /* ── BUBBLES ────────────────────────────────────────────────── */
+  .bubble-row {
+    display: flex; gap: 8px; align-items: flex-end;
+    animation: msgIn 0.25s cubic-bezier(0.16,1,0.3,1) both;
+  }
+
+  .bubble-row.user { justify-content: flex-end; }
+
+  .bubble-avatar {
+    width: 26px; height: 26px; border-radius: 8px; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--fire), var(--gold));
+    display: flex; align-items: center; justify-content: center;
+    font-size: 11px; font-weight: 900; color: #fff;
+    margin-bottom: 2px;
+  }
+
+  .bubble {
+    max-width: 78%; padding: 10px 13px;
+    font-size: 13px; font-weight: 500; line-height: 1.55;
+    border-radius: 16px;
+  }
+
+  .bubble.bot {
+    background: var(--plate);
+    border: 1px solid var(--ash);
+    color: var(--chalk);
+    border-bottom-left-radius: 4px;
+  }
+
+  .bubble.user {
+    background: linear-gradient(135deg, var(--fire), #cc3d00);
+    color: #fff;
+    border-bottom-right-radius: 4px;
+    font-weight: 600;
+  }
+
+  .bubble strong { color: var(--ember); font-weight: 700; }
+
+  /* ── TYPING INDICATOR ───────────────────────────────────────── */
+  #typing-indicator {
+    display: none;
+    gap: 8px; align-items: flex-end;
+    animation: msgIn 0.2s ease both;
+  }
+
+  #typing-indicator.visible { display: flex; }
+
+  .typing-bubble {
+    background: var(--plate); border: 1px solid var(--ash);
+    border-radius: 16px; border-bottom-left-radius: 4px;
+    padding: 12px 16px;
+    display: flex; gap: 4px; align-items: center;
+  }
+
+  .typing-dot {
+    width: 5px; height: 5px; border-radius: 50%;
+    background: var(--smoke);
+    animation: bounce-dot 1.2s infinite;
+  }
+
+  .typing-dot:nth-child(2) { animation-delay: 0.18s; }
+  .typing-dot:nth-child(3) { animation-delay: 0.36s; }
+
+  /* ── BUTTONS ROW ────────────────────────────────────────────── */
+  .btn-row {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    padding-left: 34px;
+    animation: msgIn 0.25s ease both;
+  }
+
+  .flow-btn {
+    padding: 7px 13px; border-radius: 100px;
+    background: rgba(255,77,0,0.1);
+    border: 1px solid rgba(255,77,0,0.3);
+    color: var(--ember);
+    font-family: var(--font); font-size: 12px; font-weight: 700;
+    cursor: pointer; transition: all 0.15s;
+    white-space: nowrap;
+  }
+
+  .flow-btn:hover {
+    background: rgba(255,77,0,0.22);
+    border-color: var(--fire);
+    transform: translateY(-1px);
+  }
+
+  .flow-btn:active { transform: translateY(0); }
+
+  /* ── INLINE INPUT ───────────────────────────────────────────── */
+  .inline-input-row {
+    padding-left: 34px;
+    animation: msgIn 0.25s ease both;
+  }
+
+  .inline-input-wrap {
+    display: flex; gap: 6px;
+  }
+
+  .inline-input {
+    flex: 1; padding: 9px 13px; border-radius: 100px;
+    background: var(--plate); border: 1px solid var(--ash);
+    color: var(--white); font-family: var(--font); font-size: 13px; font-weight: 500;
+    outline: none; transition: border-color 0.2s;
+  }
+
+  .inline-input:focus { border-color: var(--fire); }
+  .inline-input::placeholder { color: var(--smoke); font-weight: 400; }
+
+  .inline-send {
+    width: 36px; height: 36px; border-radius: 50%;
+    background: linear-gradient(135deg, var(--fire), #cc3d00);
+    border: none; color: #fff; font-size: 14px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: transform 0.15s;
+    flex-shrink: 0;
+  }
+
+  .inline-send:hover { transform: scale(1.08); }
+
+  /* ── CARD COMPONENTS ────────────────────────────────────────── */
+  .cards-wrap { padding-left: 34px; animation: msgIn 0.3s ease both; }
+
+  .plan-card {
+    background: var(--steel);
+    border: 1px solid var(--ash);
+    border-radius: var(--radius);
+    padding: 14px; margin-bottom: 9px;
+    cursor: pointer; transition: all 0.2s; position: relative;
+    overflow: hidden;
+  }
+
+  .plan-card::before {
+    content: '';
+    position: absolute; left: 0; top: 0; bottom: 0; width: 3px;
+    background: var(--accent-color, var(--ash));
+    transition: width 0.2s;
+  }
+
+  .plan-card:hover { transform: translateX(3px); border-color: var(--accent-color, var(--ash)); }
+  .plan-card:hover::before { width: 4px; }
+
+  .plan-badge {
+    position: absolute; top: -1px; right: 12px;
+    background: var(--fire); color: #fff;
+    font-size: 9px; font-weight: 800; letter-spacing: 1px;
+    padding: 3px 9px; border-radius: 0 0 8px 8px;
+    text-transform: uppercase;
+  }
+
+  .plan-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .plan-name { font-size: 15px; font-weight: 800; color: var(--white); }
+  .plan-price { font-size: 17px; font-weight: 900; }
+
+  .plan-perks { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 11px; }
+
+  .perk-tag {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--ash);
+    border-radius: 100px;
+    padding: 2px 8px; font-size: 10px; font-weight: 600; color: var(--chalk);
+  }
+
+  .plan-cta {
+    width: 100%; padding: 9px; border-radius: 9px;
+    border: none; font-family: var(--font); font-size: 12px; font-weight: 800;
+    cursor: pointer; letter-spacing: 0.3px; transition: opacity 0.15s;
+    color: #fff;
+  }
+
+  .plan-cta:hover { opacity: 0.88; }
+
+  /* class card */
+  .class-card {
+    background: var(--steel); border: 1px solid var(--ash);
+    border-radius: var(--radius); padding: 13px; margin-bottom: 8px;
+    transition: border-color 0.2s;
+  }
+
+  .class-card:hover { border-color: var(--fire); }
+
+  .class-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+  .class-name { display: flex; align-items: center; gap: 7px; font-size: 13px; font-weight: 800; color: var(--white); }
+  .class-intensity { font-size: 10px; font-weight: 600; color: var(--smoke); }
+
+  .spots-tag {
+    font-size: 10px; font-weight: 800; padding: 3px 8px; border-radius: 100px;
+  }
+
+  .spots-low  { background: rgba(230,57,70,0.15); color: #e63946; border: 1px solid rgba(230,57,70,0.3); }
+  .spots-ok   { background: rgba(45,198,83,0.12); color: var(--green-ok); border: 1px solid rgba(45,198,83,0.25); }
+
+  .class-times { display: flex; flex-wrap: wrap; gap: 5px; margin-bottom: 9px; }
+
+  .time-chip {
+    background: rgba(255,77,0,0.12); border: 1px solid rgba(255,77,0,0.25);
+    color: var(--ember); border-radius: 100px;
+    padding: 2px 8px; font-size: 10px; font-weight: 700;
+  }
+
+  .book-btn {
+    width: 100%; padding: 8px; border-radius: 9px;
+    background: linear-gradient(135deg, var(--fire), #cc3d00);
+    border: none; color: #fff;
+    font-family: var(--font); font-size: 11px; font-weight: 800;
+    cursor: pointer; transition: opacity 0.15s; letter-spacing: 0.3px;
+  }
+
+  .book-btn:hover { opacity: 0.88; }
+
+  /* promo card */
+  .promo-card {
+    border-radius: var(--radius); padding: 14px; margin-bottom: 9px;
+    transition: transform 0.2s;
+  }
+
+  .promo-card.urgent {
+    background: linear-gradient(135deg, rgba(230,57,70,0.12), rgba(255,77,0,0.08));
+    border: 1px solid rgba(230,57,70,0.35);
+  }
+
+  .promo-card.normal {
+    background: var(--steel); border: 1px solid var(--ash);
+  }
+
+  .promo-card:hover { transform: translateY(-2px); }
+
+  .promo-header { display: flex; align-items: center; gap: 9px; margin-bottom: 6px; }
+  .promo-title { font-size: 13px; font-weight: 800; color: var(--white); }
+  .promo-deadline { font-size: 10px; font-weight: 700; color: var(--red-urg); margin-top: 2px; }
+  .promo-desc { font-size: 12px; font-weight: 500; color: var(--chalk); margin-bottom: 10px; line-height: 1.5; }
+
+  .promo-btn {
+    width: 100%; padding: 9px; border-radius: 9px; border: none;
+    font-family: var(--font); font-size: 12px; font-weight: 800;
+    cursor: pointer; letter-spacing: 0.3px; transition: opacity 0.15s; color: #fff;
+  }
+
+  .promo-btn:hover { opacity: 0.88; }
+
+  /* confirm card */
+  .confirm-card {
+    background: linear-gradient(135deg, rgba(45,198,83,0.12), rgba(45,198,83,0.05));
+    border: 1px solid rgba(45,198,83,0.3);
+    border-radius: var(--radius); padding: 18px;
+    animation: msgIn 0.3s ease both;
+  }
+
+  .confirm-title { text-align: center; margin-bottom: 14px; }
+  .confirm-title .big-emoji { font-size: 34px; display: block; margin-bottom: 6px; }
+  .confirm-title strong { font-size: 15px; font-weight: 900; color: var(--green-ok); letter-spacing: -0.3px; }
+
+  .confirm-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.05);
+    font-size: 12px;
+  }
+
+  .confirm-row .lbl { color: var(--smoke); font-weight: 600; }
+  .confirm-row .val { color: var(--white); font-weight: 700; }
+
+  .confirm-note {
+    background: rgba(255,77,0,0.1); border-radius: 8px;
+    padding: 9px 11px; margin-top: 11px;
+    font-size: 11px; font-weight: 600; color: var(--ember); line-height: 1.5;
+  }
+
+  .back-btn {
+    width: 100%; margin-top: 11px; padding: 10px; border-radius: 10px;
+    background: linear-gradient(135deg, var(--green-ok), #22a846);
+    border: none; color: #fff;
+    font-family: var(--font); font-size: 13px; font-weight: 800;
+    cursor: pointer; transition: opacity 0.15s;
+  }
+
+  .back-btn:hover { opacity: 0.88; }
+
+  /* lead success */
+  .lead-card {
+    background: linear-gradient(135deg, rgba(255,77,0,0.15), rgba(255,193,7,0.08));
+    border: 1px solid rgba(255,77,0,0.4);
+    border-radius: var(--radius); padding: 20px; text-align: center;
+  }
+
+  .lead-emoji { font-size: 38px; display: block; margin-bottom: 8px; }
+  .lead-title { font-size: 16px; font-weight: 900; color: var(--ember); margin-bottom: 8px; letter-spacing: -0.3px; }
+  .lead-sub   { font-size: 12px; font-weight: 500; color: var(--chalk); line-height: 1.6; margin-bottom: 14px; }
+
+  .lead-badges { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-bottom: 14px; }
+
+  .lead-badge {
+    background: rgba(255,77,0,0.15); border: 1px solid rgba(255,77,0,0.25);
+    border-radius: 100px; padding: 4px 10px;
+    font-size: 10px; font-weight: 700; color: var(--ember);
+  }
+
+  /* faq buttons */
+  .faq-btn {
+    width: 100%; text-align: left;
+    padding: 10px 13px; border-radius: 10px;
+    background: var(--plate); border: 1px solid var(--ash);
+    color: var(--chalk); font-family: var(--font); font-size: 12px; font-weight: 600;
+    cursor: pointer; margin-bottom: 5px;
+    transition: all 0.15s;
+  }
+
+  .faq-btn:hover { background: rgba(255,77,0,0.1); border-color: rgba(255,77,0,0.3); color: var(--white); }
+
+  /* visit benefits */
+  .visit-benefits {
+    background: rgba(45,198,83,0.08); border: 1px solid rgba(45,198,83,0.25);
+    border-radius: 10px; padding: 12px;
+  }
+
+  .benefit-row { font-size: 12px; font-weight: 600; color: var(--green-ok); margin-bottom: 5px; line-height: 1.4; }
+  .benefit-row:last-child { margin-bottom: 0; }
+
+  /* location card */
+  .loc-card {
+    background: var(--steel); border: 1px solid var(--ash);
+    border-radius: var(--radius); overflow: hidden; margin-bottom: 8px;
+  }
+
+  .loc-map-placeholder {
+    height: 110px;
+    background: linear-gradient(135deg, var(--plate), var(--steel));
+    display: flex; align-items: center; justify-content: center;
+    position: relative; font-size: 36px;
+  }
+
+  .loc-open-badge {
+    position: absolute; top: 10px; right: 12px;
+    background: rgba(45,198,83,0.9); color: #fff;
+    font-size: 9px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase;
+    padding: 3px 9px; border-radius: 100px;
+  }
+
+  .loc-body { padding: 13px; }
+  .loc-name { font-size: 14px; font-weight: 800; color: var(--white); margin-bottom: 3px; }
+  .loc-addr { font-size: 12px; font-weight: 500; color: var(--smoke); margin-bottom: 11px; }
+
+  .loc-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 7px; margin-bottom: 11px; }
+
+  .loc-cell {
+    background: var(--plate); border-radius: 8px; padding: 8px;
+  }
+
+  .loc-cell .lc-label { font-size: 9px; font-weight: 700; color: var(--smoke); text-transform: uppercase; letter-spacing: 0.5px; }
+  .loc-cell .lc-value { font-size: 12px; font-weight: 700; color: var(--white); margin-top: 2px; }
+
+  /* memb status */
+  .memb-card {
+    background: var(--steel); border: 1px solid var(--ash);
+    border-radius: var(--radius); padding: 14px;
+  }
+
+  .memb-title { font-size: 13px; font-weight: 800; color: var(--white); margin-bottom: 11px; }
+
+  .memb-row {
+    display: flex; justify-content: space-between;
+    padding: 7px 0; border-bottom: 1px solid rgba(255,255,255,0.04);
+    font-size: 12px;
+  }
+
+  .memb-row .lbl { color: var(--smoke); font-weight: 600; }
+  .memb-row .val { color: var(--white); font-weight: 700; }
+
+  .upsell-note { font-size: 11px; font-weight: 700; color: var(--fire); margin: 10px 0 8px; line-height: 1.5; }
+
+  /* ── FREE INPUT FOOTER ──────────────────────────────────────── */
+  .chat-footer {
+    background: var(--steel);
+    border-top: 1px solid var(--ash);
+    padding: 10px 12px 12px;
+    flex-shrink: 0;
+  }
+
+  .free-input-row { display: flex; gap: 8px; align-items: center; }
+
+  #free-input {
+    flex: 1; padding: 10px 15px; border-radius: 100px;
+    background: var(--plate); border: 1px solid var(--ash);
+    color: var(--white); font-family: var(--font); font-size: 13px; font-weight: 500;
+    outline: none; transition: border-color 0.2s;
+  }
+
+  #free-input:focus { border-color: rgba(255,77,0,0.5); }
+  #free-input::placeholder { color: var(--smoke); font-weight: 400; }
+  #free-input:disabled { opacity: 0.5; }
+
+  #send-btn {
+    width: 40px; height: 40px; border-radius: 50%; flex-shrink: 0;
+    background: linear-gradient(135deg, var(--fire), #cc3d00);
+    border: none; color: #fff; font-size: 15px;
+    cursor: pointer; display: flex; align-items: center; justify-content: center;
+    transition: all 0.15s;
+  }
+
+  #send-btn:hover { transform: scale(1.08); box-shadow: 0 0 12px rgba(255,77,0,0.4); }
+  #send-btn:disabled { opacity: 0.4; cursor: not-allowed; transform: none; }
+
+  .footer-hint {
+    text-align: center; margin-top: 7px;
+    font-size: 9px; font-weight: 600; color: var(--ash);
+    letter-spacing: 0.5px; text-transform: uppercase;
+  }
+
+  /* ── ANIMATIONS ─────────────────────────────────────────────── */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(16px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(30px) scale(0.97); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+
+  @keyframes msgIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  @keyframes bounce-dot {
+    0%, 60%, 100% { transform: translateY(0); }
+    30%           { transform: translateY(-5px); }
+  }
+
+  @keyframes pulse-dot {
+    0%, 100% { opacity: 1; }
+    50%      { opacity: 0.3; }
+  }
+
+  @keyframes glow-pulse {
+    0%, 100% { box-shadow: 0 0 20px rgba(255,77,0,0.35); }
+    50%      { box-shadow: 0 0 40px rgba(255,77,0,0.6); }
+  }
+</style>
+</head>
+<body>
+
+<div class="bg-glow"></div>
+
+<!-- ── LANDING ─────────────────────────────────────────────────────── -->
+<section id="landing">
+  <div class="landing-inner">
+    <div class="badge-pill">CHATBOT FITNESS PRO</div>
+
+    <h1 class="landing-title">
+      PowerGym
+      <span>FitBot</span>
+    </h1>
+
+    <p class="landing-sub">
+      Asistente conversacional para gimnasios.<br>
+      Vende, agenda y retiene clientes en piloto automático.
+    </p>
+
+    <div class="features-grid">
+      <div class="feature-card">
+        <span class="feature-icon">💪</span>
+        <div class="feature-title">Vende membresías</div>
+        <div class="feature-desc">Flujo completo de captación</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">📅</span>
+        <div class="feature-title">Agenda visitas</div>
+        <div class="feature-desc">Reservas automatizadas</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🎯</span>
+        <div class="feature-title">Lead Scoring</div>
+        <div class="feature-desc">Califica prospectos</div>
+      </div>
+      <div class="feature-card">
+        <span class="feature-icon">🔥</span>
+        <div class="feature-title">8 menús activos</div>
+        <div class="feature-desc">Flujos conversacionales</div>
+      </div>
+    </div>
+
+    <button class="cta-btn" onclick="openChat()">
+      🚀 Probar FitBot Ahora
+    </button>
+  </div>
+</section>
+
+<!-- ── CHAT ─────────────────────────────────────────────────────────── -->
+<section id="chat-shell">
+  <div class="chat-window">
+
+    <div class="chat-header">
+      <div class="header-left">
+        <div class="bot-avatar">💪</div>
+        <div>
+          <div class="bot-name">FitBot — PowerGym</div>
+          <div class="bot-status"><span class="status-dot"></span> Online ahora</div>
+        </div>
+      </div>
+      <div class="header-right">
+        <div class="score-badge" id="score-badge">🎯 0 pts</div>
+        <button class="close-btn" onclick="closeChat()">✕</button>
+      </div>
+    </div>
+
+    <div id="messages"></div>
+
+    <!-- typing indicator lives here, appended by JS -->
+
+    <div class="chat-footer">
+      <div class="free-input-row">
+        <input id="free-input" type="text" placeholder="Escribe tu pregunta..." autocomplete="off"/>
+        <button id="send-btn" onclick="sendFreeMsg()">→</button>
+      </div>
+      <div class="footer-hint">⚡ PowerGym FitBot · Powered by Make + AI</div>
+    </div>
+
+  </div>
+</section>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────────
+const MAKE_WEBHOOK    = "https://hook.us2.make.com/muf1kmtrxspov250p45mtx7sg6520v6c";
+const CONVERSATION_ID = "user_" + Date.now();
+
+// ── DATA ──────────────────────────────────────────────────────────────
+const PLANS = [
+  {
+    id: "basic", name: "Básico", price: "$29/mes",
+    color: "#64748b", accent: "#94a3b8", emoji: "🥈",
+    benefits: ["Acceso sala de pesas","Casillero incluido","App de seguimiento","Horario 6am–10pm"],
+    upsell: "pro"
+  },
+  {
+    id: "pro", name: "Pro", price: "$49/mes",
+    color: "#ff4d00", accent: "#ff8c42", emoji: "🥇",
+    badge: "MÁS POPULAR",
+    benefits: ["Todo lo del Básico","Clases ilimitadas","1 sesión PT/mes","Piscina & sauna","Nutrición básica"],
+    upsell: "premium"
+  },
+  {
+    id: "premium", name: "Premium", price: "$89/mes",
+    color: "#ffc107", accent: "#ffda6a", emoji: "👑",
+    benefits: ["Todo lo del Pro","PT ilimitado","Nutrición personalizada","Acceso 24/7","Zona VIP & spa","Terapia recuperación"]
+  }
+];
+
+const CLASSES = [
+  { id:"crossfit",  name:"CrossFit",          emoji:"🔥", times:["6:00am","12:00pm","6:00pm"],   intensity:"Alta",      spots:8  },
+  { id:"funcional", name:"Funcional",          emoji:"⚡", times:["7:00am","5:00pm","7:00pm"],    intensity:"Media-Alta", spots:12 },
+  { id:"yoga",      name:"Yoga & Mindfulness", emoji:"🧘", times:["8:00am","6:30pm"],             intensity:"Baja",      spots:15 },
+  { id:"spinning",  name:"Spinning",           emoji:"🚴", times:["6:30am","12:30pm","7:30pm"],   intensity:"Alta",      spots:6  },
+  { id:"hiit",      name:"HIIT",               emoji:"💥", times:["7:30am","6:00pm"],             intensity:"Muy Alta",  spots:10 },
+  { id:"boxeo",     name:"Boxeo Fitness",       emoji:"🥊", times:["5:00pm","7:00pm"],             intensity:"Alta",      spots:8  }
+];
+
+const FAQS = [
+  { q:"¿Cuánto cuesta la membresía?",    a:"Tenemos planes desde $29/mes. El más popular es el Pro a $49/mes con clases ilimitadas y acceso completo. ¿Quieres ver todos los planes?" },
+  { q:"¿Hay entrenador personal?",        a:"¡Sí! Todos incluyen orientación inicial. El Pro tiene 1 sesión PT/mes y el Premium PT ilimitado. ¿Te interesa el entrenamiento personalizado?" },
+  { q:"¿Puedo probar gratis?",            a:"¡Claro! Ofrecemos una clase de prueba GRATUITA para nuevos miembros. Sin compromisos. ¿Agendamos tu visita ahora?" },
+  { q:"¿Hay parqueo?",                    a:"Sí, parqueo privado para 80 vehículos, totalmente gratuito para miembros. También contamos con estaciones de bicicleta." },
+  { q:"¿Puedo congelar mi membresía?",   a:"Sí, puedes congelar hasta 2 meses al año sin costo. Solo solicítalo con 5 días de anticipación." },
+  { q:"¿Tienen duchas y vestidores?",    a:"Vestidores completos, duchas, casilleros y zona de secado. El Premium incluye acceso a zona VIP con amenidades extra." }
+];
+
+const PROMOS = [
+  { id:"p1", emoji:"🔥", title:"MATRÍCULA GRATIS",   desc:"Únete esta semana y paga $0 de inscripción. Solo quedan 5 cupos.",                      urgent:true,  deadline:"Vence domingo", cta:"Aprovechar ahora" },
+  { id:"p2", emoji:"👥", title:"TRAE UN AMIGO",       desc:"Refiere a un amigo y ambos obtienen 1 mes gratis al renovar.",                           urgent:false, cta:"Más info" },
+  { id:"p3", emoji:"📅", title:"PLAN ANUAL −30%",     desc:"Paga el año completo y ahorra hasta $315. Precio fijo garantizado por 12 meses.",        urgent:true,  deadline:"Solo 3 cupos", cta:"Ver ahorro total" }
+];
+
+const OBJECTIVES = [
+  { id:"weight",   emoji:"🔥", label:"Bajar de peso",             plan:"pro",     msg:"Para perder peso necesitas cardio + funcional + nutrición. El plan Pro incluye clases ilimitadas de HIIT y Spinning más 1 sesión PT/mes. ¡Combo perfecto!" },
+  { id:"muscle",   emoji:"💪", label:"Ganar músculo",             plan:"premium", msg:"Para ganar masa seria necesitas entrenamiento progresivo + nutrición precisa. Plan Premium: PT ilimitado y plan nutricional personalizado. Los resultados hablan." },
+  { id:"maintain", emoji:"⚖️", label:"Mantenerme en forma",       plan:"basic",   msg:"Para mantenerte sin complicarte, el plan Básico es perfecto. Acceso completo a sala de pesas con horario extendido para entrenar a tu ritmo." },
+  { id:"compete",  emoji:"🏆", label:"Competir / Alto rendimiento",plan:"premium", msg:"Para competición necesitas lo mejor: PT ilimitado, terapia de recuperación especializada y plan nutricional de precisión. Solo en Premium." }
+];
+
+// ── STATE ─────────────────────────────────────────────────────────────
+let userData     = {};
+let leadScore    = 0;
+let currentNode  = "welcome";
+let isTyping     = false;
+let isMakeLoading = false;
+let conversationHistory = [];
+let selectedPlan  = null;
+let selectedClass = null;
+
+// ── DOM REFS ──────────────────────────────────────────────────────────
+const messagesEl  = document.getElementById("messages");
+const freeInputEl = document.getElementById("free-input");
+const sendBtnEl   = document.getElementById("send-btn");
+const scoreBadge  = document.getElementById("score-badge");
+
+// ── UTILS ─────────────────────────────────────────────────────────────
+function uid() { return Date.now() + Math.random(); }
+
+function scrollBottom() {
+  setTimeout(() => { messagesEl.scrollTop = messagesEl.scrollHeight; }, 50);
+}
+
+function updateScore(pts) {
+  leadScore += pts;
+  scoreBadge.textContent = "🎯 " + leadScore + " pts";
+  scoreBadge.classList.add("visible");
+}
+
+function parseBold(text) {
+  return (text || "").replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, "<br>");
+}
+
+// ── TYPING INDICATOR ──────────────────────────────────────────────────
+let typingEl = null;
+
+function showTyping() {
+  if (typingEl) return;
+  typingEl = document.createElement("div");
+  typingEl.className = "bubble-row";
+  typingEl.id = "typing-row";
+  typingEl.innerHTML = `
+    <div class="bubble-avatar">F</div>
+    <div class="typing-bubble">
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+      <div class="typing-dot"></div>
+    </div>`;
+  messagesEl.appendChild(typingEl);
+  scrollBottom();
+}
+
+function hideTyping() {
+  if (typingEl) { typingEl.remove(); typingEl = null; }
+}
+
+function delay(ms) {
+  showTyping();
+  return new Promise(r => setTimeout(() => { hideTyping(); r(); }, ms));
+}
+
+// ── ADD MESSAGES ──────────────────────────────────────────────────────
+function addBotBubble(text) {
+  const row = document.createElement("div");
+  row.className = "bubble-row";
+  row.innerHTML = `<div class="bubble-avatar">F</div><div class="bubble bot">${parseBold(text)}</div>`;
+  messagesEl.appendChild(row);
+  scrollBottom();
+}
+
+function addUserBubble(text) {
+  const row = document.createElement("div");
+  row.className = "bubble-row user";
+  row.innerHTML = `<div class="bubble user">${text}</div>`;
+  messagesEl.appendChild(row);
+  scrollBottom();
+}
+
+function addButtons(buttons) {
+  const row = document.createElement("div");
+  row.className = "btn-row";
+  buttons.forEach(btn => {
+    const b = document.createElement("button");
+    b.className = "flow-btn";
+    b.textContent = btn.label;
+    b.onclick = () => handleFlowBtn(btn);
+    row.appendChild(b);
+  });
+  messagesEl.appendChild(row);
+  scrollBottom();
+}
+
+function addInlineInput(cfg, nodeId) {
+  const wrap = document.createElement("div");
+  wrap.className = "inline-input-row";
+  wrap.innerHTML = `
+    <div class="inline-input-wrap">
+      <input class="inline-input" placeholder="${cfg.placeholder}" autocomplete="off"/>
+      <button class="inline-send">→</button>
+    </div>`;
+  const inp = wrap.querySelector(".inline-input");
+  const btn = wrap.querySelector(".inline-send");
+  const submit = () => {
+    const v = inp.value.trim();
+    if (!v) return;
+    addUserBubble(v);
+    userData[cfg.key] = v;
+    updateScore(5);
+    inp.disabled = true; btn.disabled = true;
+    navigateTo(cfg.next, { [cfg.key]: v });
+  };
+  btn.onclick = submit;
+  inp.onkeydown = e => { if (e.key === "Enter") submit(); };
+  messagesEl.appendChild(wrap);
+  setTimeout(() => inp.focus(), 100);
+  scrollBottom();
+}
+
+// ── FLOW NAVIGATION ───────────────────────────────────────────────────
+async function navigateTo(nodeId, meta = {}) {
+  Object.assign(userData, meta);
+  currentNode = nodeId;
+
+  const name = userData.name || "campeón";
+
+  const nodes = {
+
+    welcome: async () => {
+      await delay(600);  addBotBubble("¡Hola! 👋 Soy **FitBot**, tu asistente de **PowerGym**.");
+      await delay(700);  addBotBubble("Estoy aquí para ayudarte a transformar tu vida 💪 ¿Cómo te llamas?");
+      addInlineInput({ placeholder: "Escribe tu nombre...", key: "name", next: "main_menu" }, "welcome");
+    },
+
+    main_menu: async () => {
+      await delay(600);  addBotBubble(`¡Perfecto, **${name}**! 🔥 Bienvenid@ a PowerGym.`);
+      await delay(600);  addBotBubble("¿En qué puedo ayudarte hoy?");
+      addButtons([
+        { label:"💪 Planes y Precios",    next:"planes"       },
+        { label:"🏋️ Clases Disponibles",  next:"clases"       },
+        { label:"📅 Agendar Visita",       next:"agendar_intro"},
+        { label:"🎯 Objetivos Fitness",    next:"objetivos"    },
+        { label:"📍 Ubicación y Horarios", next:"ubicacion"    },
+        { label:"❓ Preguntas Frecuentes", next:"faq"          },
+        { label:"🔥 Promociones",          next:"promos"       },
+        { label:"👤 Mi Membresía",         next:"membresia"    }
+      ]);
+    },
+
+    planes: async () => {
+      await delay(500);  addBotBubble("💪 Tenemos **3 planes** diseñados para cada etapa de tu transformación:");
+      await delay(300);  addPlanCards();
+    },
+
+    clases: async () => {
+      await delay(500);  addBotBubble("🏋️ Estas son nuestras clases disponibles esta semana:");
+      await delay(300);  addClassCards();
+    },
+
+    objetivos: async () => {
+      await delay(500);  addBotBubble("🎯 ¡Genial! Definir tu objetivo es el primer paso.");
+      await delay(600);  addBotBubble("¿Qué quieres lograr con tu entrenamiento?");
+      addButtons(OBJECTIVES.map(o => ({ label: `${o.emoji} ${o.label}`, next: `obj_${o.id}` })));
+    },
+
+    agendar_intro: async () => {
+      await delay(500);  addBotBubble(`📅 ¡Excelente decisión, **${name}**! Tu visita incluye:`);
+      await delay(400);  addVisitBenefits();
+      await delay(500);  addBotBubble("¿Cuál es tu número de teléfono para confirmar la cita?");
+      addInlineInput({ placeholder:"Ej: 555-1234...", key:"phone", next:"agendar_dia" }, "agendar_intro");
+    },
+
+    agendar_dia: async () => {
+      await delay(500);  addBotBubble("📆 ¿Qué día prefieres visitarnos?");
+      addButtons([
+        { label:"Lunes",     next:"agendar_hora", meta:{ dia:"Lunes"     }},
+        { label:"Martes",    next:"agendar_hora", meta:{ dia:"Martes"    }},
+        { label:"Miércoles", next:"agendar_hora", meta:{ dia:"Miércoles" }},
+        { label:"Jueves",    next:"agendar_hora", meta:{ dia:"Jueves"    }},
+        { label:"Viernes",   next:"agendar_hora", meta:{ dia:"Viernes"   }},
+        { label:"Sábado",    next:"agendar_hora", meta:{ dia:"Sábado"    }}
+      ]);
+    },
+
+    agendar_hora: async () => {
+      await delay(500);  addBotBubble("⏰ ¿A qué hora te viene mejor?");
+      addButtons([
+        { label:"🌅 Mañana (6am–12pm)",  next:"agendar_confirm", meta:{ hora:"Mañana"   }},
+        { label:"☀️ Mediodía (12–3pm)",  next:"agendar_confirm", meta:{ hora:"Mediodía" }},
+        { label:"🌆 Tarde (3–7pm)",      next:"agendar_confirm", meta:{ hora:"Tarde"    }},
+        { label:"🌙 Noche (7–10pm)",     next:"agendar_confirm", meta:{ hora:"Noche"    }}
+      ]);
+    },
+
+    agendar_confirm: async () => {
+      await delay(400);  addConfirmCard();
+    },
+
+    ubicacion: async () => {
+      await delay(500);  addBotBubble("📍 **PowerGym** — Tu templo fitness");
+      await delay(300);  addLocationCard();
+    },
+
+    faq: async () => {
+      await delay(500);  addBotBubble("❓ Preguntas frecuentes. ¿Sobre qué quieres saber?");
+      await delay(300);  addFaqButtons();
+    },
+
+    promos: async () => {
+      await delay(500);  addBotBubble("🔥 ¡Estas promociones son por tiempo **LIMITADO**!");
+      await delay(300);  addPromoCards();
+    },
+
+    membresia: async () => {
+      await delay(500);  addBotBubble("👤 ¿Qué necesitas con tu membresía?");
+      addButtons([
+        { label:"📊 Ver mi estado",      next:"memb_estado"  },
+        { label:"🔄 Renovar membresía",  next:"memb_renovar" },
+        { label:"⬆️ Cambiar de plan",    next:"planes"       },
+        { label:"🆘 Soporte",            next:"soporte"      }
+      ]);
+    },
+
+    memb_estado: async () => {
+      await delay(500);  addBotBubble("Para consultar tu membresía necesito verificar tu teléfono registrado.");
+      await delay(400);  addBotBubble("📞 ¿Cuál es tu teléfono?");
+      addInlineInput({ placeholder:"Tu teléfono...", key:"phone_lookup", next:"memb_result" }, "memb_estado");
+    },
+
+    memb_result: async () => {
+      await delay(400);  addMembCard();
+    },
+
+    memb_renovar: async () => {
+      await delay(500);  addBotBubble("🔄 ¡Perfecto! Renovar tu membresía es rápido.");
+      await delay(600);  addBotBubble("Un asesor te contactará en los próximos 30 minutos con beneficios especiales de renovación. ¿Confirmamos?");
+      addButtons([
+        { label:"✅ Sí, contactarme", next:"lead_captured" },
+        { label:"🏠 Volver al menú",  next:"main_menu"     }
+      ]);
+    },
+
+    soporte: async () => {
+      await delay(500);  addBotBubble("🆘 Te conectaré con un asesor ahora mismo.");
+      await delay(600);  addBotBubble("Horario de soporte: Lun–Sáb 7am–9pm\n📞 También puedes llamar al **+1 555-GYM-HELP**");
+      addButtons([
+        { label:"💬 Chat con asesor", next:"lead_captured" },
+        { label:"🏠 Volver al menú",  next:"main_menu"     }
+      ]);
+    },
+
+    lead_captured: async () => {
+      await delay(400);  addLeadCard();
+    }
+  };
+
+  // objective handlers
+  for (const obj of OBJECTIVES) {
+    nodes[`obj_${obj.id}`] = async () => {
+      const plan = PLANS.find(p => p.id === obj.plan);
+      await delay(700);  addBotBubble(obj.msg);
+      await delay(600);  addBotBubble(`🏆 Te recomiendo el **Plan ${plan.name}** (${plan.price}). Es exactamente lo que necesitas.`);
+      await delay(300);
+      const wrap = document.createElement("div");
+      wrap.className = "btn-row";
+      const b1 = document.createElement("button");
+      b1.className = "flow-btn";
+      b1.textContent = `${plan.emoji} Ver plan ${plan.name} – ${plan.price}`;
+      b1.style.background = `rgba(${hexToRgb(plan.color)},0.15)`;
+      b1.style.borderColor = plan.color;
+      b1.style.color = plan.accent;
+      b1.onclick = () => selectPlan(plan);
+      const b2 = document.createElement("button");
+      b2.className = "flow-btn";
+      b2.textContent = "Ver todos los planes";
+      b2.onclick = () => { addUserBubble("Ver todos los planes"); navigateTo("planes"); };
+      wrap.appendChild(b1); wrap.appendChild(b2);
+      messagesEl.appendChild(wrap);
+      scrollBottom();
+    };
+  }
+
+  if (nodes[nodeId]) nodes[nodeId]();
+}
+
+// ── CARD BUILDERS ─────────────────────────────────────────────────────
+function addPlanCards() {
+  const wrap = document.createElement("div");
+  wrap.className = "cards-wrap";
+  PLANS.forEach(plan => {
+    const card = document.createElement("div");
+    card.className = "plan-card";
+    card.style.setProperty("--accent-color", plan.color);
+    card.innerHTML = `
+      ${plan.badge ? `<div class="plan-badge">${plan.badge}</div>` : ""}
+      <div class="plan-header">
+        <div class="plan-name">${plan.emoji} ${plan.name}</div>
+        <div class="plan-price" style="color:${plan.color}">${plan.price}</div>
+      </div>
+      <div class="plan-perks">${plan.benefits.map(b => `<span class="perk-tag">✓ ${b}</span>`).join("")}</div>
+      <button class="plan-cta" style="background:linear-gradient(135deg,${plan.color},${plan.accent})">Quiero este plan →</button>`;
+    card.querySelector(".plan-cta").onclick = () => selectPlan(plan);
+    wrap.appendChild(card);
+  });
+  const tip = document.createElement("div");
+  tip.style.cssText = "background:rgba(255,77,0,0.08);border:1px solid rgba(255,77,0,0.2);border-radius:10px;padding:10px 13px;font-size:11px;font-weight:600;color:#ff8c42;margin-top:4px;";
+  tip.textContent = "💡 El 73% de nuestros miembros eligen el plan Pro. ¿Quieres saber por qué?";
+  wrap.appendChild(tip);
+  messagesEl.appendChild(wrap);
+  scrollBottom();
+}
+
+function addClassCards() {
+  const wrap = document.createElement("div");
+  wrap.className = "cards-wrap";
+  CLASSES.forEach(cls => {
+    const div = document.createElement("div");
+    div.className = "class-card";
+    div.innerHTML = `
+      <div class="class-header">
+        <div class="class-name">${cls.emoji} ${cls.name} <span class="class-intensity">· ${cls.intensity}</span></div>
+        <span class="spots-tag ${cls.spots<=6?'spots-low':'spots-ok'}">${cls.spots<=6?`⚠️ ${cls.spots} cupos`:`✅ ${cls.spots} cupos`}</span>
+      </div>
+      <div class="class-times">${cls.times.map(t=>`<span class="time-chip">🕐 ${t}</span>`).join("")}</div>
+      <button class="book-btn">Reservar clase →</button>`;
+    div.querySelector(".book-btn").onclick = () => bookClass(cls);
+    wrap.appendChild(div);
+  });
+  messagesEl.appendChild(wrap);
+  scrollBottom();
+}
+
+function addPromoCards() {
+  const wrap = document.createElement("div");
+  wrap.className = "cards-wrap";
+  PROMOS.forEach(p => {
+    const div = document.createElement("div");
+    div.className = `promo-card ${p.urgent ? "urgent" : "normal"}`;
+    div.innerHTML = `
+      <div class="promo-header">
+        <span style="font-size:22px">${p.emoji}</span>
+        <div>
+          <div class="promo-title">${p.title}</div>
+          ${p.deadline ? `<div class="promo-deadline">⏰ ${p.deadline}</div>` : ""}
+        </div>
+      </div>
+      <div class="promo-desc">${p.desc}</div>
+      <button class="promo-btn" style="background:${p.urgent?'linear-gradient(135deg,#e63946,#ff4d00)':'linear-gradient(135deg,#ff4d00,#cc3d00)'}">${p.cta} →</button>`;
+    div.querySelector(".promo-btn").onclick = () => claimPromo(p);
+    wrap.appendChild(div);
+  });
+  messagesEl.appendChild(wrap);
+  scrollBottom();
+}
+
+function addVisitBenefits() {
+  const wrap = document.createElement("div");
+  wrap.className = "cards-wrap";
+  const div = document.createElement("div");
+  div.className = "visit-benefits";
+  ["✅ Tour completo del gym","✅ Clase de prueba GRATIS","✅ Evaluación física","✅ Asesoría nutricional","✅ Sin compromiso de compra"]
+    .forEach(b => { div.innerHTML += `<div class="benefit-row">${b}</div>`; });
+  wrap.appendChild(div);
+  messagesEl.appendChild(wrap);
+  scrollBottom();
+}
+
+function addLocationCard() {
+  const wrap = document.createElement("div");
+  wrap.className = "cards-wrap";
+  wrap.innerHTML = `
+    <div class="loc-card">
+      <div class="loc-map-placeholder">
+        📍
+        <div class="loc-open-badge">ABIERTO AHORA</div>
+      </div>
+      <div class="loc-body">
+        <div class="loc-name">🏢 PowerGym Downtown</div>
+        <div class="loc-addr">Av. Fitness 123, Col. Salud, CDMX</div>
+        <div class="loc-grid">
+          <div class="loc-cell"><div class="lc-label">Lun–Vie</div><div class="lc-value">5:30am–11pm</div></div>
+          <div class="loc-cell"><div class="lc-label">Sáb–Dom</div><div class="lc-value">7am–9pm</div></div>
+          <div class="loc-cell"><div class="lc-label">Parqueo</div><div class="lc-value">Gratuito</div></div>
+          <div class="loc-cell"><div class="lc-label">Metro</div><div class="lc-value">L3 – Fitness</div></div>
+        </div>
+        <button class="book-btn" id="loc-cta">🗺️ Agendar visita →</button>
+      </div>
+    </div>`;
+  wrap.querySelector("#loc-cta").onclick = () => { addUserBubble("¿Cómo llegar?"); navigateTo("agendar_intro"); };
+  messagesEl.appendChild(wrap);
+  scrollBottom();
+}
+
+function addFaqButtons() {
+  const wrap = document.createElement("div");
+  wrap.className = "cards-wrap";
+  FAQS.forEach(faq => {
+    const btn = document.createElement("button");
+    btn.className = "faq-btn";
+    btn.textContent = "❓ " + faq.q;
+    btn.onclick = async () => {
+      addUserBubble(faq.q);
+      await delay(700);
+      addBotBubble(faq.a);
+      await delay(400);
+      addButtons([
+        { label:"❓ Otra pregunta", next:"faq"          },
+        { label:"🏠 Menú principal",next:"main_menu"    },
+        { label:"📅 Agendar visita",next:"agendar_intro"}
+      ]);
+    };
+    wrap.appendChild(btn);
+  });
+  messagesEl.appendChild(wrap);
+  scrollBottom();
+}
+
+function addConfirmCard() {
+  const wrap = document.createElement("div");
+  wrap.className = "cards-wrap";
+  const rows = [
+    { lbl:"Nombre",   val: userData.name  },
+    { lbl:"Teléfono", val: userData.phone },
+    { lbl:"Día",      val: userData.dia   },
+    { lbl:"Horario",  val: userData.hora  }
+  ].filter(r => r.val);
+  wrap.innerHTML = `
+    <div class="confirm-card">
+      <div class="confirm-title">
+        <span class="big-emoji">🎉</span>
+        <strong>¡VISITA CONFIRMADA!</strong>
+      </div>
+      ${rows.map(r => `<div class="confirm-row"><span class="lbl">${r.lbl}</span><span class="val">${r.val}</span></div>`).join("")}
+      <div class="confirm-note">📱 Recibirás un SMS de confirmación en los próximos minutos.</div>
+      <button class="back-btn" onclick="navigateTo('main_menu')">🏠 Volver al menú</button>
+    </div>`;
+  messagesEl.appendChild(wrap);
+  updateScore(20);
+  scrollBottom();
+}
+
+function addLeadCard() {
+  const name  = userData.name  || "Campeón";
+  const phone = userData.phone || "tu número";
+  const wrap  = document.createElement("div");
+  wrap.className = "cards-wrap";
+  wrap.innerHTML = `
+    <div class="lead-card">
+      <span class="lead-emoji">🔥</span>
+      <div class="lead-title">¡${name}, estás a un paso!</div>
+      <div class="lead-sub">Un asesor te contactará al <strong>${phone}</strong><br>en menos de 30 minutos.</div>
+      <div class="lead-badges">
+        <span class="lead-badge">Score: ${leadScore + 20} pts</span>
+        <span class="lead-badge">Asesor asignado</span>
+        <span class="lead-badge">Seguimiento activo</span>
+      </div>
+      <button class="back-btn" onclick="navigateTo('main_menu')" style="background:linear-gradient(135deg,#ff4d00,#cc3d00)">🏠 Volver al menú</button>
+    </div>`;
+  messagesEl.appendChild(wrap);
+  updateScore(20);
+  scrollBottom();
+}
+
+function addMembCard() {
+  const wrap = document.createElement("div");
+  wrap.className = "cards-wrap";
+  wrap.innerHTML = `
+    <div class="memb-card">
+      <div class="memb-title">📊 Estado de Membresía</div>
+      <div class="memb-row"><span class="lbl">Plan actual</span><span class="val">Pro ⭐</span></div>
+      <div class="memb-row"><span class="lbl">Estado</span><span class="val">✅ Activo</span></div>
+      <div class="memb-row"><span class="lbl">Próximo pago</span><span class="val">15 Mayo 2026</span></div>
+      <div class="memb-row"><span class="lbl">Clases este mes</span><span class="val">8 de ilimitadas</span></div>
+      <div class="upsell-note">💡 Actualiza a Premium y desbloquea PT ilimitado + nutrición personalizada.</div>
+      <button class="book-btn" onclick="navigateTo('planes')">⬆️ Ver plan Premium</button>
+    </div>`;
+  messagesEl.appendChild(wrap);
+  scrollBottom();
+}
+
+// ── INTERACTION HANDLERS ──────────────────────────────────────────────
+function handleFlowBtn(btn) {
+  addUserBubble(btn.label);
+  updateScore(3);
+  if (btn.meta) Object.assign(userData, btn.meta);
+  navigateTo(btn.next, btn.meta || {});
+}
+
+function selectPlan(plan) {
+  selectedPlan = plan;
+  updateScore(15);
+  addUserBubble(`Quiero el plan ${plan.name}`);
+  (async () => {
+    await delay(700);
+    addBotBubble(`🔥 ¡Excelente elección, **${userData.name || "campeón"}**! El plan **${plan.name}** es perfecto para ti.`);
+    await delay(600);
+    addBotBubble("Para completar tu registro necesito algunos datos. ¿Cuál es tu número de teléfono?");
+    addInlineInput({ placeholder:"Tu teléfono...", key:"phone", next:"lead_captured" }, "plan_capture");
+  })();
+}
+
+function bookClass(cls) {
+  selectedClass = cls;
+  updateScore(10);
+  addUserBubble(`Quiero reservar ${cls.name}`);
+  (async () => {
+    await delay(700);
+    addBotBubble(`🏋️ ¡${cls.name} es una clase increíble! ${cls.spots <= 6 ? `⚠️ Solo quedan **${cls.spots} cupos** disponibles.` : ""}`);
+    await delay(600);
+    addBotBubble("¿Cuál es tu teléfono para confirmar tu reserva?");
+    addInlineInput({ placeholder:"Tu teléfono...", key:"phone", next:"lead_captured" }, "class_capture");
+  })();
+}
+
+function claimPromo(promo) {
+  updateScore(12);
+  addUserBubble(promo.cta);
+  (async () => {
+    await delay(700);
+    addBotBubble(`🔥 ¡Genial! La promo **${promo.title}** sigue activa. Un asesor te contactará en minutos.`);
+    await delay(500);
+    if (userData.phone) {
+      navigateTo("lead_captured");
+    } else {
+      addBotBubble("¿A qué número te contactamos?");
+      addInlineInput({ placeholder:"Tu teléfono...", key:"phone", next:"lead_captured" }, "promo_capture");
+    }
+  })();
+}
+
+// ── MAKE WEBHOOK ──────────────────────────────────────────────────────
+async function sendFreeMsg() {
+  const text = freeInputEl.value.trim();
+  if (!text || isMakeLoading) return;
+
+  addUserBubble(text);
+  freeInputEl.value = "";
+  updateScore(2);
+
+  const historySnapshot = [...conversationHistory];
+
+  isMakeLoading = true;
+  freeInputEl.disabled = true;
+  sendBtnEl.disabled = true;
+  freeInputEl.placeholder = "Escribiendo...";
+
+  showTyping();
+
+  try {
+    const res  = await fetch(MAKE_WEBHOOK, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message:         text,
+        conversation_id: CONVERSATION_ID,
+        history:         historySnapshot
+      })
+    });
+
+    const data  = await res.json();
+    const reply = data?.reply || "Lo siento, no pude procesar tu mensaje. ¿Puedo ayudarte con algo más? 💪";
+
+    hideTyping();
+    addBotBubble(reply);
+
+    conversationHistory = [
+      ...historySnapshot,
+      { role:"user",      content: text  },
+      { role:"assistant", content: reply }
+    ];
+
+  } catch (err) {
+    console.error("Make webhook error:", err);
+    hideTyping();
+    addBotBubble("⚠️ Hubo un problema conectando con el servidor. Por favor intenta de nuevo.");
+  } finally {
+    isMakeLoading = false;
+    freeInputEl.disabled = false;
+    sendBtnEl.disabled   = false;
+    freeInputEl.placeholder = "Escribe tu pregunta...";
+    freeInputEl.focus();
+  }
+}
+
+freeInputEl.addEventListener("keydown", e => { if (e.key === "Enter") sendFreeMsg(); });
+
+// ── OPEN / CLOSE ──────────────────────────────────────────────────────
+function openChat() {
+  document.getElementById("landing").style.display    = "none";
+  document.getElementById("chat-shell").classList.add("visible");
+  navigateTo("welcome");
+}
+
+function closeChat() {
+  document.getElementById("chat-shell").classList.remove("visible");
+  document.getElementById("landing").style.display = "flex";
+  // reset
+  messagesEl.innerHTML = "";
+  userData = {}; leadScore = 0; currentNode = "welcome";
+  conversationHistory = []; selectedPlan = null; selectedClass = null;
+  scoreBadge.classList.remove("visible");
+  freeInputEl.value = "";
+}
+
+// ── HELPER ────────────────────────────────────────────────────────────
+function hexToRgb(hex) {
+  const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  return r ? `${parseInt(r[1],16)},${parseInt(r[2],16)},${parseInt(r[3],16)}` : "255,77,0";
+}
+</script>
+</body>
+</html>
