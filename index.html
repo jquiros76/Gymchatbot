@@ -139,7 +139,7 @@
     border: none; color: #fff;
     font-family: var(--font); font-size: 15px; font-weight: 800;
     letter-spacing: 0.3px; cursor: pointer;
-    box-shadow: 0 0 0 0 rgba(255,77,0,0.4);
+    box-shadow: 0 0 rgba(255,77,0,0.4);
     animation: fadeUp 0.5s 0.4s ease both, glow-pulse 3s 1s infinite;
     transition: transform 0.15s;
   }
@@ -734,7 +734,6 @@
           <div class="bot-name">FitBot — PowerGym</div>
           <div class="bot-status"><span class="status-dot"></span> Online ahora</div>
         </div>
-      </div>
       <div class="header-right">
         <div class="score-badge" id="score-badge">🎯 0 pts</div>
         <button class="close-btn" onclick="closeChat()">✕</button>
@@ -742,8 +741,6 @@
     </div>
 
     <div id="messages"></div>
-
-    <!-- typing indicator lives here, appended by JS -->
 
     <div class="chat-footer">
       <div class="free-input-row">
@@ -757,8 +754,9 @@
 </section>
 
 <script>
+
 // ── CONFIG ────────────────────────────────────────────────────────────
-const MAKE_WEBHOOK    = "https://hook.us2.make.com/muf1kmtrxspov250p45mtx7sg6520v6c";
+const MAKE_WEBHOOK = "https://hook.us2.make.com/muf1kmtrxspov250p45mtx7sg6520v6c";
 const CONVERSATION_ID = "user_" + Date.now();
 
 // ── DATA ──────────────────────────────────────────────────────────────
@@ -815,24 +813,22 @@ const OBJECTIVES = [
 ];
 
 // ── STATE ─────────────────────────────────────────────────────────────
-let userData     = {};
-let leadScore    = 0;
-let currentNode  = "welcome";
-let isTyping     = false;
+let userData = {};
+let leadScore = 0;
+let currentNode = "welcome";
+let isTyping = false;
 let isMakeLoading = false;
 let conversationHistory = [];
-let selectedPlan  = null;
+let selectedPlan = null;
 let selectedClass = null;
 
 // ── DOM REFS ──────────────────────────────────────────────────────────
-const messagesEl  = document.getElementById("messages");
+const messagesEl = document.getElementById("messages");
 const freeInputEl = document.getElementById("free-input");
-const sendBtnEl   = document.getElementById("send-btn");
-const scoreBadge  = document.getElementById("score-badge");
+const sendBtnEl = document.getElementById("send-btn");
+const scoreBadge = document.getElementById("score-badge");
 
 // ── UTILS ─────────────────────────────────────────────────────────────
-function uid() { return Date.now() + Math.random(); }
-
 function scrollBottom() {
   setTimeout(() => { messagesEl.scrollTop = messagesEl.scrollHeight; }, 50);
 }
@@ -844,7 +840,7 @@ function updateScore(pts) {
 }
 
 function parseBold(text) {
-  return (text || "").replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\n/g, "<br>");
+  return (text || "").replace(/\\(.?)\\*/g, '<strong>$1</strong>').replace(/\n/g, "<br>");
 }
 
 // ── TYPING INDICATOR ──────────────────────────────────────────────────
@@ -879,7 +875,7 @@ function delay(ms) {
 function addBotBubble(text) {
   const row = document.createElement("div");
   row.className = "bubble-row";
-  row.innerHTML = `<div class="bubble-avatar">F</div><div class="bubble bot">${parseBold(text)}</div>`;
+  row.innerHTML = <div class="bubble-avatar">F</div><div class="bubble bot">${parseBold(text)}</div>;
   messagesEl.appendChild(row);
   scrollBottom();
 }
@@ -887,7 +883,7 @@ function addBotBubble(text) {
 function addUserBubble(text) {
   const row = document.createElement("div");
   row.className = "bubble-row user";
-  row.innerHTML = `<div class="bubble user">${text}</div>`;
+  row.innerHTML = <div class="bubble user">${text}</div>;
   messagesEl.appendChild(row);
   scrollBottom();
 }
@@ -923,13 +919,59 @@ function addInlineInput(cfg, nodeId) {
     userData[cfg.key] = v;
     updateScore(5);
     inp.disabled = true; btn.disabled = true;
-    navigateTo(cfg.next, { [cfg.key]: v });
+    // Manda a Make en vez de navegar local
+    sendToMake(v);
   };
   btn.onclick = submit;
   inp.onkeydown = e => { if (e.key === "Enter") submit(); };
   messagesEl.appendChild(wrap);
   setTimeout(() => inp.focus(), 100);
   scrollBottom();
+}
+
+// ── MAKE CONNECTION - ESTA ES LA CLAVE ─────────────────────────────────
+async function sendToMake(text) {
+  if (isMakeLoading) return;
+  
+  isMakeLoading = true;
+  freeInputEl.disabled = true;
+  sendBtnEl.disabled = true;
+  
+  // Guarda en history antes del fetch
+  conversationHistory.push({role: 'user', content: text});
+  
+  showTyping();
+
+  try {
+    const res = await fetch(MAKE_WEBHOOK, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: text,
+        conversation_id: CONVERSATION_ID,
+        history: conversationHistory.slice(0, -1) // Todo menos el mensaje actual
+      })
+    });
+
+    const data = await res.json();
+    const reply = data?.reply || "Lo siento, no pude procesar tu mensaje. ¿Puedo ayudarte con algo más? 💪";
+
+    hideTyping();
+    addBotBubble(reply);
+    
+    conversationHistory.push({role: 'assistant', content: reply});
+
+  } catch (err) {
+    console.error("Make webhook error:", err);
+    hideTyping();
+    addBotBubble("⚠️ Hubo un problema conectando con el servidor. Por favor intenta de nuevo.");
+  } finally {
+    isMakeLoading = false;
+    freeInputEl.disabled = false;
+    sendBtnEl.disabled = false;
+    freeInputEl.placeholder = "Escribe tu pregunta...";
+    freeInputEl.focus();
+  }
 }
 
 // ── FLOW NAVIGATION ───────────────────────────────────────────────────
@@ -940,15 +982,14 @@ async function navigateTo(nodeId, meta = {}) {
   const name = userData.name || "campeón";
 
   const nodes = {
-
     welcome: async () => {
-      await delay(600);  addBotBubble("¡Hola! 👋 Soy **FitBot**, tu asistente de **PowerGym**.");
+      await delay(600);  addBotBubble("¡Hola! 👋 Soy *FitBot, tu asistente de **PowerGym*.");
       await delay(700);  addBotBubble("Estoy aquí para ayudarte a transformar tu vida 💪 ¿Cómo te llamas?");
       addInlineInput({ placeholder: "Escribe tu nombre...", key: "name", next: "main_menu" }, "welcome");
     },
 
     main_menu: async () => {
-      await delay(600);  addBotBubble(`¡Perfecto, **${name}**! 🔥 Bienvenid@ a PowerGym.`);
+      await delay(600);  addBotBubble(¡Perfecto, **${name}**! 🔥 Bienvenid@ a PowerGym.);
       await delay(600);  addBotBubble("¿En qué puedo ayudarte hoy?");
       addButtons([
         { label:"💪 Planes y Precios",    next:"planes"       },
@@ -963,7 +1004,7 @@ async function navigateTo(nodeId, meta = {}) {
     },
 
     planes: async () => {
-      await delay(500);  addBotBubble("💪 Tenemos **3 planes** diseñados para cada etapa de tu transformación:");
+      await delay(500);  addBotBubble("💪 Tenemos *3 planes* diseñados para cada etapa de tu transformación:");
       await delay(300);  addPlanCards();
     },
 
@@ -975,14 +1016,14 @@ async function navigateTo(nodeId, meta = {}) {
     objetivos: async () => {
       await delay(500);  addBotBubble("🎯 ¡Genial! Definir tu objetivo es el primer paso.");
       await delay(600);  addBotBubble("¿Qué quieres lograr con tu entrenamiento?");
-      addButtons(OBJECTIVES.map(o => ({ label: `${o.emoji} ${o.label}`, next: `obj_${o.id}` })));
+      addButtons(OBJECTIVES.map(o => ({ label: ${o.emoji} ${o.label}, next: obj_${o.id} })));
     },
 
     agendar_intro: async () => {
-      await delay(500);  addBotBubble(`📅 ¡Excelente decisión, **${name}**! Tu visita incluye:`);
+      await delay(500);  addBotBubble(📅 ¡Excelente decisión, **${name}**! Tu visita incluye:);
       await delay(400);  addVisitBenefits();
       await delay(500);  addBotBubble("¿Cuál es tu número de teléfono para confirmar la cita?");
-      addInlineInput({ placeholder:"Ej: 555-1234...", key:"phone", next:"agendar_dia" }, "agendar_intro");
+      addInlineInput({ placeholder:"Ej: 8888-9999...", key:"phone", next:"agendar_dia" }, "agendar_intro");
     },
 
     agendar_dia: async () => {
@@ -1012,7 +1053,7 @@ async function navigateTo(nodeId, meta = {}) {
     },
 
     ubicacion: async () => {
-      await delay(500);  addBotBubble("📍 **PowerGym** — Tu templo fitness");
+      await delay(500);  addBotBubble("📍 *PowerGym* — Tu templo fitness");
       await delay(300);  addLocationCard();
     },
 
@@ -1022,7 +1063,7 @@ async function navigateTo(nodeId, meta = {}) {
     },
 
     promos: async () => {
-      await delay(500);  addBotBubble("🔥 ¡Estas promociones son por tiempo **LIMITADO**!");
+      await delay(500);  addBotBubble("🔥 ¡Estas promociones son por tiempo *LIMITADO*!");
       await delay(300);  addPromoCards();
     },
 
@@ -1057,7 +1098,7 @@ async function navigateTo(nodeId, meta = {}) {
 
     soporte: async () => {
       await delay(500);  addBotBubble("🆘 Te conectaré con un asesor ahora mismo.");
-      await delay(600);  addBotBubble("Horario de soporte: Lun–Sáb 7am–9pm\n📞 También puedes llamar al **+1 555-GYM-HELP**");
+      await delay(600);  addBotBubble("Horario de soporte: Lun–Sáb 7am–9pm\n📞 También puedes llamar al *+1 555-GYM-HELP*");
       addButtons([
         { label:"💬 Chat con asesor", next:"lead_captured" },
         { label:"🏠 Volver al menú",  next:"main_menu"     }
@@ -1071,17 +1112,17 @@ async function navigateTo(nodeId, meta = {}) {
 
   // objective handlers
   for (const obj of OBJECTIVES) {
-    nodes[`obj_${obj.id}`] = async () => {
+    nodes[obj_${obj.id}] = async () => {
       const plan = PLANS.find(p => p.id === obj.plan);
       await delay(700);  addBotBubble(obj.msg);
-      await delay(600);  addBotBubble(`🏆 Te recomiendo el **Plan ${plan.name}** (${plan.price}). Es exactamente lo que necesitas.`);
+      await delay(600);  addBotBubble(🏆 Te recomiendo el **Plan ${plan.name}** (${plan.price}). Es exactamente lo que necesitas.);
       await delay(300);
       const wrap = document.createElement("div");
       wrap.className = "btn-row";
       const b1 = document.createElement("button");
       b1.className = "flow-btn";
-      b1.textContent = `${plan.emoji} Ver plan ${plan.name} – ${plan.price}`;
-      b1.style.background = `rgba(${hexToRgb(plan.color)},0.15)`;
+      b1.textContent = ${plan.emoji} Ver plan ${plan.name} – ${plan.price};
+      b1.style.background = rgba(${hexToRgb(plan.color)},0.15);
       b1.style.borderColor = plan.color;
       b1.style.color = plan.accent;
       b1.onclick = () => selectPlan(plan);
@@ -1107,12 +1148,12 @@ function addPlanCards() {
     card.className = "plan-card";
     card.style.setProperty("--accent-color", plan.color);
     card.innerHTML = `
-      ${plan.badge ? `<div class="plan-badge">${plan.badge}</div>` : ""}
+      ${plan.badge ? <div class="plan-badge">${plan.badge}</div> : ""}
       <div class="plan-header">
         <div class="plan-name">${plan.emoji} ${plan.name}</div>
         <div class="plan-price" style="color:${plan.color}">${plan.price}</div>
       </div>
-      <div class="plan-perks">${plan.benefits.map(b => `<span class="perk-tag">✓ ${b}</span>`).join("")}</div>
+      <div class="plan-perks">${plan.benefits.map(b => <span class="perk-tag">✓ ${b}</span>).join("")}</div>
       <button class="plan-cta" style="background:linear-gradient(135deg,${plan.color},${plan.accent})">Quiero este plan →</button>`;
     card.querySelector(".plan-cta").onclick = () => selectPlan(plan);
     wrap.appendChild(card);
@@ -1134,9 +1175,9 @@ function addClassCards() {
     div.innerHTML = `
       <div class="class-header">
         <div class="class-name">${cls.emoji} ${cls.name} <span class="class-intensity">· ${cls.intensity}</span></div>
-        <span class="spots-tag ${cls.spots<=6?'spots-low':'spots-ok'}">${cls.spots<=6?`⚠️ ${cls.spots} cupos`:`✅ ${cls.spots} cupos`}</span>
+        <span class="spots-tag ${cls.spots<=6?'spots-low':'spots-ok'}">${cls.spots<=6?⚠️ ${cls.spots} cupos:✅ ${cls.spots} cupos}</span>
       </div>
-      <div class="class-times">${cls.times.map(t=>`<span class="time-chip">🕐 ${t}</span>`).join("")}</div>
+      <div class="class-times">${cls.times.map(t=><span class="time-chip">🕐 ${t}</span>).join("")}</div>
       <button class="book-btn">Reservar clase →</button>`;
     div.querySelector(".book-btn").onclick = () => bookClass(cls);
     wrap.appendChild(div);
@@ -1150,13 +1191,13 @@ function addPromoCards() {
   wrap.className = "cards-wrap";
   PROMOS.forEach(p => {
     const div = document.createElement("div");
-    div.className = `promo-card ${p.urgent ? "urgent" : "normal"}`;
+    div.className = promo-card ${p.urgent ? "urgent" : "normal"};
     div.innerHTML = `
       <div class="promo-header">
         <span style="font-size:22px">${p.emoji}</span>
         <div>
           <div class="promo-title">${p.title}</div>
-          ${p.deadline ? `<div class="promo-deadline">⏰ ${p.deadline}</div>` : ""}
+          ${p.deadline ? <div class="promo-deadline">⏰ ${p.deadline}</div> : ""}
         </div>
       </div>
       <div class="promo-desc">${p.desc}</div>
@@ -1174,7 +1215,7 @@ function addVisitBenefits() {
   const div = document.createElement("div");
   div.className = "visit-benefits";
   ["✅ Tour completo del gym","✅ Clase de prueba GRATIS","✅ Evaluación física","✅ Asesoría nutricional","✅ Sin compromiso de compra"]
-    .forEach(b => { div.innerHTML += `<div class="benefit-row">${b}</div>`; });
+    .forEach(b => { div.innerHTML += <div class="benefit-row">${b}</div>; });
   wrap.appendChild(div);
   messagesEl.appendChild(wrap);
   scrollBottom();
@@ -1245,7 +1286,7 @@ function addConfirmCard() {
         <span class="big-emoji">🎉</span>
         <strong>¡VISITA CONFIRMADA!</strong>
       </div>
-      ${rows.map(r => `<div class="confirm-row"><span class="lbl">${r.lbl}</span><span class="val">${r.val}</span></div>`).join("")}
+      ${rows.map(r => <div class="confirm-row"><span class="lbl">${r.lbl}</span><span class="val">${r.val}</span></div>).join("")}
       <div class="confirm-note">📱 Recibirás un SMS de confirmación en los próximos minutos.</div>
       <button class="back-btn" onclick="navigateTo('main_menu')">🏠 Volver al menú</button>
     </div>`;
@@ -1304,46 +1345,27 @@ function handleFlowBtn(btn) {
 function selectPlan(plan) {
   selectedPlan = plan;
   updateScore(15);
-  addUserBubble(`Quiero el plan ${plan.name}`);
-  (async () => {
-    await delay(700);
-    addBotBubble(`🔥 ¡Excelente elección, **${userData.name || "campeón"}**! El plan **${plan.name}** es perfecto para ti.`);
-    await delay(600);
-    addBotBubble("Para completar tu registro necesito algunos datos. ¿Cuál es tu número de teléfono?");
-    addInlineInput({ placeholder:"Tu teléfono...", key:"phone", next:"lead_captured" }, "plan_capture");
-  })();
+  addUserBubble(Quiero el plan ${plan.name});
+  // En vez de flujo local, manda a Make
+  sendToMake(Quiero información del plan ${plan.name});
 }
 
 function bookClass(cls) {
   selectedClass = cls;
   updateScore(10);
-  addUserBubble(`Quiero reservar ${cls.name}`);
-  (async () => {
-    await delay(700);
-    addBotBubble(`🏋️ ¡${cls.name} es una clase increíble! ${cls.spots <= 6 ? `⚠️ Solo quedan **${cls.spots} cupos** disponibles.` : ""}`);
-    await delay(600);
-    addBotBubble("¿Cuál es tu teléfono para confirmar tu reserva?");
-    addInlineInput({ placeholder:"Tu teléfono...", key:"phone", next:"lead_captured" }, "class_capture");
-  })();
+  addUserBubble(Quiero reservar ${cls.name});
+  // Manda a Make
+  sendToMake(Quiero reservar la clase ${cls.name});
 }
 
 function claimPromo(promo) {
   updateScore(12);
   addUserBubble(promo.cta);
-  (async () => {
-    await delay(700);
-    addBotBubble(`🔥 ¡Genial! La promo **${promo.title}** sigue activa. Un asesor te contactará en minutos.`);
-    await delay(500);
-    if (userData.phone) {
-      navigateTo("lead_captured");
-    } else {
-      addBotBubble("¿A qué número te contactamos?");
-      addInlineInput({ placeholder:"Tu teléfono...", key:"phone", next:"lead_captured" }, "promo_capture");
-    }
-  })();
+  // Manda a Make
+  sendToMake(Me interesa la promo ${promo.title});
 }
 
-// ── MAKE WEBHOOK ──────────────────────────────────────────────────────
+// ── MAKE WEBHOOK - INPUT LIBRE ────────────────────────────────────────
 async function sendFreeMsg() {
   const text = freeInputEl.value.trim();
   if (!text || isMakeLoading) return;
@@ -1352,56 +1374,14 @@ async function sendFreeMsg() {
   freeInputEl.value = "";
   updateScore(2);
 
-  const historySnapshot = [...conversationHistory];
-
-  isMakeLoading = true;
-  freeInputEl.disabled = true;
-  sendBtnEl.disabled = true;
-  freeInputEl.placeholder = "Escribiendo...";
-
-  showTyping();
-
-  try {
-    const res  = await fetch(MAKE_WEBHOOK, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message:         text,
-        conversation_id: CONVERSATION_ID,
-        history:         historySnapshot
-      })
-    });
-
-    const data  = await res.json();
-    const reply = data?.reply || "Lo siento, no pude procesar tu mensaje. ¿Puedo ayudarte con algo más? 💪";
-
-    hideTyping();
-    addBotBubble(reply);
-
-    conversationHistory = [
-      ...historySnapshot,
-      { role:"user",      content: text  },
-      { role:"assistant", content: reply }
-    ];
-
-  } catch (err) {
-    console.error("Make webhook error:", err);
-    hideTyping();
-    addBotBubble("⚠️ Hubo un problema conectando con el servidor. Por favor intenta de nuevo.");
-  } finally {
-    isMakeLoading = false;
-    freeInputEl.disabled = false;
-    sendBtnEl.disabled   = false;
-    freeInputEl.placeholder = "Escribe tu pregunta...";
-    freeInputEl.focus();
-  }
+  sendToMake(text);
 }
 
 freeInputEl.addEventListener("keydown", e => { if (e.key === "Enter") sendFreeMsg(); });
 
 // ── OPEN / CLOSE ──────────────────────────────────────────────────────
 function openChat() {
-  document.getElementById("landing").style.display    = "none";
+  document.getElementById("landing").style.display = "none";
   document.getElementById("chat-shell").classList.add("visible");
   navigateTo("welcome");
 }
@@ -1420,7 +1400,7 @@ function closeChat() {
 // ── HELPER ────────────────────────────────────────────────────────────
 function hexToRgb(hex) {
   const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-  return r ? `${parseInt(r[1],16)},${parseInt(r[2],16)},${parseInt(r[3],16)}` : "255,77,0";
+  return r ? ${parseInt(r[1],16)},${parseInt(r[2],16)},${parseInt(r[3],16)} : "255,77,0";
 }
 </script>
 </body>
