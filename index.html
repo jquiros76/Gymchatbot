@@ -963,24 +963,25 @@ async function sendToMake(text) {
       })
     });
 
-    const data = await res.json();
-    const reply = data?.reply || "Lo siento, no pude procesar tu mensaje. ¿Puedo ayudarte con algo más? 💪";
+  let reply = "⚠️ Error procesando respuesta.";
 
-    hideTyping();
-    addBotBubble(reply);
-    
-    conversationHistory.push({role: 'assistant', content: reply});
+const contentType = res.headers.get("content-type");
 
-  } catch (err) {
-    console.error("Make webhook error:", err);
-    hideTyping();
-    addBotBubble("⚠️ Hubo un problema conectando con el servidor. Por favor intenta de nuevo.");
-  } finally {
-    isMakeLoading = false;
-    freeInputEl.disabled = false;
-    sendBtnEl.disabled = false;
-    freeInputEl.placeholder = "Escribe tu pregunta...";
-    freeInputEl.focus();
+if (res.ok && contentType && contentType.includes("application/json")) {
+
+  const data = await res.json();
+  reply = data?.reply || "Sin respuesta del servidor.";
+
+} else {
+
+  const text = await res.text();
+
+  console.error("Respuesta no JSON:", text);
+
+  if (res.status === 429) {
+    reply = "⚠️ El servidor está recibiendo demasiadas solicitudes. Intenta nuevamente en unos segundos.";
+  } else {
+    reply = "⚠️ Hubo un problema conectando con el servidor.";
   }
 }
 
