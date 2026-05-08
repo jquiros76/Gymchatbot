@@ -257,6 +257,9 @@
     max-width: 78%; padding: 10px 13px;
     font-size: 13px; font-weight: 500; line-height: 1.55;
     border-radius: 16px;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+    white-space: pre-wrap;
   }
 
   .bubble.bot {
@@ -264,6 +267,7 @@
     border: 1px solid var(--ash);
     color: var(--chalk);
     border-bottom-left-radius: 4px;
+    min-width: 0;
   }
 
   .bubble.user {
