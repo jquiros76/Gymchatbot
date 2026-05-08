@@ -871,7 +871,7 @@ function delay(ms) {
   return new Promise(r => setTimeout(() => { hideTyping(); r(); }, ms));
 }
 
-// ── ADD MESSAGES ──────────────────────────────────────────────────────
+// ── ADD MESSAGES ───────────────────────────────────────────────
 function addBotBubble(text) {
   const row = document.createElement("div");
   row.className = "bubble-row";
@@ -883,7 +883,7 @@ function addBotBubble(text) {
 function addUserBubble(text) {
   const row = document.createElement("div");
   row.className = "bubble-row user";
-  row.innerHTML = <div class="bubble user">${text}</div>;
+  row.innerHTML = `<div class="bubble user">${text}</div>`;
   messagesEl.appendChild(row);
   scrollBottom();
 }
