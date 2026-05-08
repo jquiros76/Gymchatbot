@@ -942,46 +942,85 @@ function addInlineInput(cfg, nodeId) {
 
 // ── MAKE CONNECTION ───────────────────────────────────────────────────
 async function sendToMake(text) {
+
   if (isMakeLoading) return;
-  
+
   isMakeLoading = true;
+
   freeInputEl.disabled = true;
   sendBtnEl.disabled = true;
-  
-  conversationHistory.push({role: 'user', content: text});
-  
+
+  conversationHistory.push({
+    role: 'user',
+    content: text
+  });
+
   showTyping();
 
   try {
+
     const res = await fetch(MAKE_WEBHOOK, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json"
+      },
       body: JSON.stringify({
         message: text,
-        conversation_id: CONVERSATION_ID,
-        history: conversationHistory.slice(0, -1)
+        conversation_id: CONVERSATION_ID
       })
     });
 
-  let reply = "⚠️ Error procesando respuesta.";
+    let reply = "⚠️ Error procesando respuesta.";
 
-const contentType = res.headers.get("content-type");
+    const contentType = res.headers.get("content-type");
 
-if (res.ok && contentType && contentType.includes("application/json")) {
+    if (res.ok && contentType && contentType.includes("application/json")) {
 
-  const data = await res.json();
-  reply = data?.reply || "Sin respuesta del servidor.";
+      const data = await res.json();
 
-} else {
+      reply = data?.reply || "Sin respuesta del servidor.";
 
-  const text = await res.text();
+    } else {
 
-  console.error("Respuesta no JSON:", text);
+      const textResponse = await res.text();
 
-  if (res.status === 429) {
-    reply = "⚠️ El servidor está recibiendo demasiadas solicitudes. Intenta nuevamente en unos segundos.";
-  } else {
-    reply = "⚠️ Hubo un problema conectando con el servidor.";
+      console.error("Respuesta no JSON:", textResponse);
+
+      if (res.status === 429) {
+
+        reply = "⚠️ Demasiadas solicitudes. Intenta nuevamente en unos segundos.";
+
+      } else {
+
+        reply = "⚠️ Hubo un problema conectando con el servidor.";
+      }
+    }
+
+    hideTyping();
+
+    addBotBubble(reply);
+
+    conversationHistory.push({
+      role: 'assistant',
+      content: reply
+    });
+
+  } catch(err) {
+
+    console.error("Make webhook error:", err);
+
+    hideTyping();
+
+    addBotBubble("⚠️ Error de conexión con el servidor.");
+
+  } finally {
+
+    isMakeLoading = false;
+
+    freeInputEl.disabled = false;
+    sendBtnEl.disabled = false;
+
+    freeInputEl.focus();
   }
 }
 
