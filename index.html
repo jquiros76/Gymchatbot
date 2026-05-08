@@ -241,7 +241,7 @@
   .bubble-row {
     display: flex; gap: 8px; align-items: flex-end;
     animation: msgIn 0.25s cubic-bezier(0.16,1,0.3,1) both;
-    width: 100%;
+
   }
 
   .bubble-row.user { justify-content: flex-end; }
@@ -255,13 +255,14 @@
   }
 
   .bubble {
+    flex-shrink: 1 1 auto;
     max-width: 78%; padding: 10px 13px;
     font-size: 13px; font-weight: 500; line-height: 1.55;
     border-radius: 16px;
     word-wrap: break-word;
     overflow-wrap: anywhere;
     white-space: pre-wrap;
-    flex-shrink: 1;
+    
   }
 
   .bubble.bot {
