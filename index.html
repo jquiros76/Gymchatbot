@@ -1292,18 +1292,18 @@ function ChatPage({ onNav }) {
     setIsTyping(true);
 
     try {
-      const res = await fetch("https://api.anthropic.com/v1/messages", {
+      const res = await fetch(
+  "https://hook.us2.make.com/k9a7efy9n32l8l1tmyqf6eszgph9lm2m", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          model: "claude-sonnet-4-20250514",
-          max_tokens: 1000,
-          system: "Eres ARIA, una asistente de fitness con IA integrada en GymOS. Eres motivacional, inteligente, concisa y orientada a resultados. Hablas en español latinoamericano. Das respuestas cortas (2-3 oraciones máximo). Eres como un coach personal de alto nivel, no un bot de soporte. Incluye emojis de fitness de vez en cuando.",
-          messages: [{ role: "user", content: input }]
-        })
-      });
+         message: input,
+      gymId: "powergym"
+    })
+  }
+);
       const data = await res.json();
-      const text = data.content?.[0]?.text || "Vamos a por ello. ¿Qué más necesitas? 💪";
+const text = data.reply;
       setIsTyping(false);
       setMessages(m => [...m, {
         id: Date.now() + 1, role: "ai", text,
