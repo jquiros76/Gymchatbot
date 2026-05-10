@@ -1,3 +1,4 @@
+import { sendAIMessage } from "./services/ai";
 import { useState, useEffect, useRef } from "react";
 
 // ─── FONT IMPORTS via style tag injected ───
@@ -1292,18 +1293,7 @@ function ChatPage({ onNav }) {
     setIsTyping(true);
 
     try {
-      const res = await fetch(
-  "https://hook.us2.make.com/k9a7efy9n32l8l1tmyqf6eszgph9lm2m", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-         message: input,
-      gymId: "powergym"
-    })
-  }
-);
-      const data = await res.json();
-const text = data.reply;
+const text = await sendAIMessage(input, "powergym");
       setIsTyping(false);
       setMessages(m => [...m, {
         id: Date.now() + 1, role: "ai", text,
